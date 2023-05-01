@@ -14,7 +14,7 @@
         <maven.compiler.target>8</maven.compiler.target>
         <log4j2.version>2.19.0</log4j2.version>
         <dependency-check-maven.version>5.3.2</dependency-check-maven.version>
-        <fully.qualified.main.class>com.cottagecoders.HibernateEC2Instances</fully.qualified.main.class>
+        <fully.qualified.main.class>com.cottagecoders.hibernateec2instances.HibernateEC2Instances</fully.qualified.main.class>
     </properties>
 
     <dependencyManagement>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>com.cottagecoders</groupId>
             <artifactId>SimpleSlack</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>0.3.0</version>
         </dependency>
 
         <dependency>

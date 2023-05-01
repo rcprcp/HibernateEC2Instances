@@ -1,4 +1,4 @@
-package com.cottagecoders;
+package com.cottagecoders.hibernateec2instances;
 
 import java.util.HashMap;
 import java.util.Map;

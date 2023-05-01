@@ -1,4 +1,4 @@
-package com.cottagecoders;
+package com.cottagecoders.hibernateec2instances;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
