@@ -4,7 +4,6 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.cottagecoders.simpleslack.FetchMembers;
 import com.cottagecoders.simpleslack.SendSlackMessage;
-import com.cottagecoders.simpleslack.userlist.Member;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,16 +16,12 @@ import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.HibernationOptions;
 import software.amazon.awssdk.services.ec2.model.Instance;
-import software.amazon.awssdk.services.ec2.model.InstanceStateChange;
 import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.StopInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.StopInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Tag;
 
-import java.io.IOException;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
 
 
 public class HibernateEC2Instances {
@@ -43,6 +38,7 @@ public class HibernateEC2Instances {
   @Parameter(names = {"--help"}, description = "This helpful information.")
   private static boolean help = false;
 
+  StringBuilder sb = new StringBuilder(2000);
 
   public static void main(String[] args) {
     HibernateEC2Instances h = new HibernateEC2Instances();
@@ -62,15 +58,11 @@ public class HibernateEC2Instances {
     FetchMembers fetch = new FetchMembers();
     SendSlackMessage ssm = new SendSlackMessage();
 
-    try {
-      Map<String, Member> members = fetch.fetchAllMembers();
-      Member member = members.get("bobp");
-      ssm.sendDM(member.getId(), String.format("Hello %s - checking  %s", member.getProfile().getRealName(), regionToCheck));
-    } catch (IOException | InterruptedException ex) {
-      LOG.error("exception sending message: {}", ex.getMessage(), ex);
-      System.exit(3);
-    }
-
+    sb.append("HibernateEC2Instances - ");
+    sb.append(new Date());
+    sb.append(" Region ");
+    sb.append(regionToCheck);
+    sb.append("\n");
     hibernate();
   }
 
@@ -130,15 +122,17 @@ public class HibernateEC2Instances {
                   // hibernate here.
                   StopInstancesRequest stopInstance = StopInstancesRequest.builder().hibernate(true).instanceIds(instance.instanceId()).build();
                   StopInstancesResponse hiber = ec2.stopInstances(stopInstance);
-                  List<InstanceStateChange> changes = hiber.stoppingInstances();
-                  LOG.info("hibernate: {} region: {} state {} ssh key: {} launch time: {}",
+
+                  String msg = String.format("hibernate: %s region: %s state %s ssh key: %s launch time: %s",
                           instance.instanceId(),
                           instance.placement().availabilityZone(),
                           instance.state().nameAsString(),
                           instance.keyName(),
                           instance.launchTime()
                   );
-
+                  LOG.info(msg);
+                  sb.append(msg);
+                  sb.append("\n");
 
                 }
               }
@@ -146,6 +140,29 @@ public class HibernateEC2Instances {
           }
         }
       }
+      // send slack messages.
+      slackIt(sb.toString());
+    }
+  }
+
+  void slackIt(String text) {
+
+    // fetch and parse the notification list.
+    String envVar = System.getenv("SLACK_NOTIFICATION_LIST");
+    if (StringUtils.isEmpty(envVar)) {
+      System.out.println("No notifications - SLACK_NOTIFICATION_LIST is empty.");
+      return;
+    }
+
+    String[] slackDisplayNames = envVar.split(",");
+    if (slackDisplayNames.length == 0) {
+      System.out.println("No notifications - can't split SLACK_NOTIFICATION_LIST.");
+      return;
+    }
+
+    SendSlackMessage ssm = new SendSlackMessage();
+    for (String displayName : slackDisplayNames) {
+      System.out.println("send slack message rcode " + ssm.sendDMByDisplayName(displayName, System.getenv("SLACKLIB_TOKEN"), text)) ;
     }
   }
 }
